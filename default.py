@@ -14,6 +14,7 @@ import base64
 import datetime
 import unicodedata
 import SimpleDownloader
+import requests
 
 familyFilter = "1"
 socket.setdefaulttimeout(60)
@@ -231,6 +232,7 @@ def listUsers(url):
 
 
 def listLive(url):
+    print 'live url ',url
     content = getUrl(url)
     content = json.loads(content)
     for item in content['list']:
@@ -266,49 +268,110 @@ def getStreamUrl(id):
     if content.find('"statusCode":410') > 0 or content.find('"statusCode":403') > 0:
         xbmc.executebuiltin('XBMC.Notification(Info:,'+translation(30022)+' (DailyMotion)!,5000)')
         return ""
+    
     else:
-        matchFullHD = re.compile('"stream_h264_hd1080_url":"(.+?)"', re.DOTALL).findall(content)
-        matchHD = re.compile('"stream_h264_hd_url":"(.+?)"', re.DOTALL).findall(content)
-        matchHQ = re.compile('"stream_h264_hq_url":"(.+?)"', re.DOTALL).findall(content)
-        matchSD = re.compile('"stream_h264_url":"(.+?)"', re.DOTALL).findall(content)
-        matchLD = re.compile('"stream_h264_ld_url":"(.+?)"', re.DOTALL).findall(content)
-        url = ""
-        if matchFullHD and maxVideoQuality == "1080p":
-            url = urllib.unquote_plus(matchFullHD[0]).replace("\\", "")
-        elif matchHD and (maxVideoQuality == "720p" or maxVideoQuality == "1080p"):
-            url = urllib.unquote_plus(matchHD[0]).replace("\\", "")
-        elif matchHQ:
-            url = urllib.unquote_plus(matchHQ[0]).replace("\\", "")
-        elif matchSD:
-            url = urllib.unquote_plus(matchSD[0]).replace("\\", "")
-        elif matchLD:
-            url = urllib.unquote_plus(matchLD[0]).replace("\\", "")
-        return url
+        get_json_code = re.compile(r'dmp\.create\(document\.getElementById\(\'player\'\),\s*(\{.*?)"\}\]\}.*\}\);').findall(content)[0]
+        get_json_code += '"}]}}}'
+        print get_json_code
+        cc= json.loads(get_json_code)['metadata']['qualities']  #['380'][0]['url']
+        print cc
+        if '1080' in cc.keys():
+            #print 'found hd'
+            return cc['1080'][0]['url']
+        elif '720' in cc.keys():
+            return cc['720'][0]['url']
+        elif '480' in cc.keys():
+            return cc['480'][0]['url']
+        elif '380' in cc.keys():
+            return cc['380'][0]['url']
+        elif '240' in cc.keys():
+            return cc['240'][0]['url']
+        elif 'auto' in cc.keys():
+            return cc['auto'][0]['url']
+        else:
+            xbmc.executebuiltin('XBMC.Notification(Info:, No playable Link found (DailyMotion)!,5000)')
+        
+        
+        
+        
+        
+        #matchFullHD = re.compile('"stream_h264_hd1080_url":"(.+?)"', re.DOTALL).findall(content)
+        #matchHD = re.compile('"stream_h264_hd_url":"(.+?)"', re.DOTALL).findall(content)
+        #matchHQ = re.compile('"stream_h264_hq_url":"(.+?)"', re.DOTALL).findall(content)
+        #matchSD = re.compile('"stream_h264_url":"(.+?)"', re.DOTALL).findall(content)
+        #matchLD = re.compile('"stream_h264_ld_url":"(.+?)"', re.DOTALL).findall(content)
+        #url = ""
+        #if matchFullHD and maxVideoQuality == "1080p":
+        #    url = urllib.unquote_plus(matchFullHD[0]).replace("\\", "")+'&redirect=0'
+        #elif matchHD and (maxVideoQuality == "720p" or maxVideoQuality == "1080p"):
+        #    url = urllib.unquote_plus(matchHD[0]).replace("\\", "")+'&redirect=0'
+        #elif matchHQ:
+        #    url = urllib.unquote_plus(matchHQ[0]).replace("\\", "")+'&redirect=0'
+        #elif matchSD:
+        #    url = urllib.unquote_plus(matchSD[0]).replace("\\", "")+'&redirect=0'
+        #elif matchLD:
+        #    url = urllib.unquote_plus(matchLD[0]).replace("\\", "")+'&redirect=0'
+        #print 'dmotion getStreamUrl url::',url
+        #return url
 
 
 def playLiveVideo(id):
+    #id = 'x1sh6ok'
     content = getUrl2("http://www.dailymotion.com/sequence/"+id)
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/34.0.1847.137 Safari/537.36'}
+    
     if content.find('"statusCode":410') > 0 or content.find('"statusCode":403') > 0:
         xbmc.executebuiltin('XBMC.Notification(Info:,'+translation(30022)+' (DailyMotion)!,5000)')
     else:
-        matchFullHD = re.compile('"hd1080URL":"(.+?)"', re.DOTALL).findall(content)
-        matchHD = re.compile('"hd720URL":"(.+?)"', re.DOTALL).findall(content)
-        matchHQ = re.compile('"hqURL":"(.+?)"', re.DOTALL).findall(content)
-        matchSD = re.compile('"sdURL":"(.+?)"', re.DOTALL).findall(content)
-        matchLD = re.compile('"video_url":"(.+?)"', re.DOTALL).findall(content)
+        #matchFullHD = re.compile('"hd1080URL":"(.+?)"', re.DOTALL).findall(content)
+        #matchHD = re.compile('"hd720URL":"(.+?)"', re.DOTALL).findall(content)
+        #matchHQ = re.compile('"hqURL":"(.+?)"', re.DOTALL).findall(content)
+        #matchSD = re.compile('"sdURL":"(.+?)"', re.DOTALL).findall(content)
+        #matchLD = re.compile('"video_url":"(.+?)"', re.DOTALL).findall(content)
+        
+        matchhds = re.compile('autoURL":"(.+?)"', re.DOTALL).findall(content)
+        #print '''__________________________________________________________________'''
+        #print matchhds
         url = ""
-        if matchFullHD and maxVideoQuality == "1080p":
-            url = urllib.unquote_plus(matchFullHD[0]).replace("\\", "")
-        elif matchHD and (maxVideoQuality == "720p" or maxVideoQuality == "1080p"):
-            url = urllib.unquote_plus(matchHD[0]).replace("\\", "")
-        elif matchHQ:
-            url = urllib.unquote_plus(matchHQ[0]).replace("\\", "")
-        elif matchSD:
-            url = urllib.unquote_plus(matchSD[0]).replace("\\", "")
-        elif matchLD:
-            url = urllib.unquote_plus(matchSD2[0]).replace("\\", "")
-        if url:
+        hdsurl = ""
+        
+        #if matchFullHD and maxVideoQuality == "1080p":
+        #    url = urllib.unquote_plus(matchFullHD[0]).replace("\\", "")+'&redirect=0'
+        #elif matchHD and (maxVideoQuality == "720p" or maxVideoQuality == "1080p"):
+        #    url = urllib.unquote_plus(matchHD[0]).replace("\\", "")+'&redirect=0'
+        #elif matchHQ:
+        #    url = urllib.unquote_plus(matchHQ[0]).replace("\\", "")+'&redirect=0'
+        #elif matchSD:
+        #    url = urllib.unquote_plus(matchSD[0]).replace("\\", "")+'&redirect=0'
+        if matchhds:
+            hdsurl = urllib.unquote_plus(matchhds[0]).replace("\\", "")+'&redirect=0'
+            #print 'hdsurl is:' ,hdsurl
+            if 'hds' in hdsurl :
+                hdsurl = hdsurl.replace('?protocol=hds','?protocol=hls')
+                req = requests.get(hdsurl, headers=headers, allow_redirects=False)
+                final_url = re.compile('.*').findall(req.text)[0]
+                print 'final_url',final_url
+                if not '.m3u8?' in final_url:
+                    xbmc.executebuiltin('XBMC.Notification(Info:,Channel may not be [COLOR yellow] LIVE [/COLOR] (DailyMotion)! Try again,5000)')
+                else:
+                    listitem = xbmcgui.ListItem(path=final_url)
+                    xbmcplugin.setResolvedUrl(pluginhandle, True, listitem)                
+                #url = req.headers.get('Location')
+            elif 'mnft?' in hdsurl:
+                xbmc.executebuiltin('XBMC.Notification(Info:,Channel is [COLOR yellow] NOT LIVE [/COLOR] (DailyMotion)!,5000)')
+        #elif matchLD:
+        #    url = urllib.unquote_plus(matchSD2[0]).replace("\\", "")        
+       
+        else:
             url = getUrl(url)
+            get_link = json.loads(url)
+            feed = get_link['alternates']
+            for i in feed:
+                name = str(i['name'])
+                if name == '720':
+                    url = i['template']
+                    print url
+                    break
             listitem = xbmcgui.ListItem(path=url)
             xbmcplugin.setResolvedUrl(pluginhandle, True, listitem)
 
@@ -429,6 +492,8 @@ def translation(id):
 def getUrl(url):
     req = urllib2.Request(url)
     req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 6.1; rv:22.0) Gecko/20100101 Firefox/22.0')
+    #req.add_header('Accept:', 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8')
+    #req.add_header('Accept-Encoding:', 'gzip, deflate')
     response = urllib2.urlopen(req)
     link = response.read()
     response.close()
@@ -567,9 +632,16 @@ elif mode == 'sortUsers1':
 elif mode == 'sortUsers2':
     sortUsers2(url)
 elif mode == 'playVideo':
+    #if url.startswith('plugin'):
+    #    print 'url @613',url
+    #
+    #    #liz.setProperty('IsPlayable', 'true')
+    #else:    
+    print url
     playVideo(url)
 elif mode == 'playLiveVideo':
     playLiveVideo(url)
+
 elif mode == 'playArte':
     playArte(url)
 elif mode == "queueVideo":
